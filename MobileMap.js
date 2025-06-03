@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Button } from 'react-native';
 import * as Location from 'expo-location';
@@ -11,6 +12,7 @@ function MapScreen({ navigation }) {
   const [location, setLocation] = useState(null);
   const [logTable, setLogTable] = useState([]);
   const [lastPosition, setLastPosition] = useState(null);
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
@@ -27,6 +29,35 @@ function MapScreen({ navigation }) {
     return R * c;
   };
 
+  // Запрос маршрута через OSRM
+  const fetchRoute = async (points) => {
+    if (points.length < 2) {
+      setRouteCoordinates([]);
+      return;
+    }
+
+    try {
+      const coordinates = points.map(p => `${p.longitude},${p.latitude}`).join(';');
+      const url = `http://router.project-osrm.org/route/v1/foot/${coordinates}?overview=full&geometries=geojson`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.code === 'Ok') {
+        const route = data.routes[0].geometry.coordinates.map(coord => ({
+          latitude: coord[1],
+          longitude: coord[0],
+        }));
+        setRouteCoordinates(route);
+      } else {
+        console.error('Ошибка OSRM:', data.code);
+        setRouteCoordinates(points.map(p => ({ latitude: p.latitude, longitude: p.longitude })));
+      }
+    } catch (e) {
+      console.error('Ошибка запроса маршрута:', e);
+      setRouteCoordinates(points.map(p => ({ latitude: p.latitude, longitude: p.longitude })));
+    }
+  };
+
   const saveLogTable = async (logTable) => {
     try {
       await AsyncStorage.setItem('logTable', JSON.stringify(logTable));
@@ -39,7 +70,9 @@ function MapScreen({ navigation }) {
     try {
       const savedLog = await AsyncStorage.getItem('logTable');
       if (savedLog) {
-        setLogTable(JSON.parse(savedLog));
+        const parsedLog = JSON.parse(savedLog);
+        setLogTable(parsedLog);
+        fetchRoute(parsedLog);
       }
     } catch (e) {
       console.error('Ошибка загрузки:', e);
@@ -49,6 +82,7 @@ function MapScreen({ navigation }) {
   const clearLogTable = async () => {
     try {
       setLogTable([]);
+      setRouteCoordinates([]);
       await AsyncStorage.removeItem('logTable');
       alert('Координаты очищены');
     } catch (e) {
@@ -70,6 +104,7 @@ function MapScreen({ navigation }) {
     setLogTable(prev => {
       const newTable = [...prev, entry].slice(-100);
       saveLogTable(newTable);
+      fetchRoute(newTable);
       return newTable;
     });
   };
@@ -99,18 +134,18 @@ function MapScreen({ navigation }) {
       setLogTable(prev => {
         const newTable = [...prev, entry].slice(-100);
         saveLogTable(newTable);
+        fetchRoute(newTable);
         return newTable;
       });
 
-      // ВНИМАНИЕ: вот здесь меняем только distanceInterval
       subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          distanceInterval: 50,  // только при перемещении на 50 метров
-          timeInterval: 0,       // отключаем таймер, чтобы не писать по времени
+          distanceInterval: 50,
+          timeInterval: 0,
         },
         (newLocation) => {
-          const { latitude, longitude } = newLocation.coords;
+          const { latitude, longitude, speed } = newLocation.coords;
 
           if (!lastPosition) return;
 
@@ -121,7 +156,9 @@ function MapScreen({ navigation }) {
             longitude
           );
 
-          if (distance >= 50) {
+          console.log('Расстояние:', distance, 'Скорость:', speed);
+
+          if (distance >= 50 && distance >= 10 && (speed === null || speed > 0.1)) {
             const entry = {
               latitude,
               longitude,
@@ -131,6 +168,7 @@ function MapScreen({ navigation }) {
             setLogTable(prev => {
               const newTable = [...prev, entry].slice(-100);
               saveLogTable(newTable);
+              fetchRoute(newTable);
               return newTable;
             });
             setLastPosition({ latitude, longitude });
@@ -161,12 +199,9 @@ function MapScreen({ navigation }) {
               longitudeDelta: 0.01,
             }}
           >
-            {logTable.length > 1 && (
+            {routeCoordinates.length > 1 && (
               <Polyline
-                coordinates={logTable.map(p => ({
-                  latitude: p.latitude,
-                  longitude: p.longitude,
-                }))}
+                coordinates={routeCoordinates}
                 strokeColor="#FF0000"
                 strokeWidth={3}
               />
