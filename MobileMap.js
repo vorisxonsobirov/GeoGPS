@@ -1,4 +1,4 @@
-
+// App.js
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Button } from 'react-native';
 import * as Location from 'expo-location';
@@ -29,7 +29,6 @@ function MapScreen({ navigation }) {
     return R * c;
   };
 
-  // Запрос маршрута через OSRM
   const fetchRoute = async (points) => {
     if (points.length < 2) {
       setRouteCoordinates([]);
@@ -155,8 +154,6 @@ function MapScreen({ navigation }) {
             latitude,
             longitude
           );
-
-          console.log('Расстояние:', distance, 'Скорость:', speed);
 
           if (distance >= 50 && distance >= 10 && (speed === null || speed > 0.1)) {
             const entry = {

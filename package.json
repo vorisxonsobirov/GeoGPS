@@ -2,7 +2,16 @@
   "name": "location-tracker-app",
   "license": "0BSD",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "app.js",
+  
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+,
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -10,12 +19,15 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/config-plugins": "~10.0.0",
     "@expo/metro-runtime": "~5.0.4",
+    "@expo/prebuild-config": "~9.0.0",
     "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-navigation/native": "^7.1.10",
     "@react-navigation/stack": "^7.3.3",
     "expo": "~53.0.9",
     "expo-location": "~18.1.5",
+    "expo-splash-screen": "^0.30.8",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
