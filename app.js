@@ -1,5 +1,5 @@
+// App.js
 import { registerRootComponent } from 'expo';
+import MapViewer from './components/MapViewer';
 
-import App from './MobileMap'; // Главный компонент
-
-registerRootComponent(App);
+registerRootComponent(MapViewer);    
