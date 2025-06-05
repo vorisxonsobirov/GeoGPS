@@ -1,15 +1,7 @@
-// components/MapViewer.js
-import { Platform } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-let MapComponent;
-if (Platform.OS === 'web') {
-  MapComponent = require('./WebMap').default;
-} else {
-  MapComponent = require('./MobileMap').default;
-}
+import MobileMap from './MobileMap'; // Direct import
 
 export default function MapViewer() {
   const [location, setLocation] = useState(null);
@@ -93,24 +85,22 @@ export default function MapViewer() {
       saveLogTable([entry]);
       fetchRoute([entry]);
 
-      if (Platform.OS !== 'web') {
-        subscription = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 10, timeInterval: 1000 },
-          (newLocation) => {
-            const distance = calculateDistance(location?.coords.latitude || initialLoc.coords.latitude, location?.coords.longitude || initialLoc.coords.longitude, newLocation.coords.latitude, newLocation.coords.longitude);
-            if (distance >= 10 && (newLocation.coords.speed === null || newLocation.coords.speed > 0.1)) {
-              const entry = { latitude: newLocation.coords.latitude, longitude: newLocation.coords.longitude, timestamp: newLocation.timestamp, isManual: false };
-              setLogTable(prev => {
-                const newTable = [...prev, entry].slice(-100);
-                saveLogTable(newTable);
-                fetchRoute(newTable);
-                return newTable;
-              });
-            }
-            setLocation(newLocation);
+      subscription = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.BestForNavigation, distanceInterval: 10, timeInterval: 1000 },
+        (newLocation) => {
+          const distance = calculateDistance(location?.coords.latitude || initialLoc.coords.latitude, location?.coords.longitude || initialLoc.coords.longitude, newLocation.coords.latitude, newLocation.coords.longitude);
+          if (distance >= 10 && (newLocation.coords.speed === null || newLocation.coords.speed > 0.1)) {
+            const entry = { latitude: newLocation.coords.latitude, longitude: newLocation.coords.longitude, timestamp: newLocation.timestamp, isManual: false };
+            setLogTable(prev => {
+              const newTable = [...prev, entry].slice(-100);
+              saveLogTable(newTable);
+              fetchRoute(newTable);
+              return newTable;
+            });
           }
-        );
-      }
+          setLocation(newLocation);
+        }
+      );
     })();
     return () => subscription?.remove();
   }, []);
@@ -141,7 +131,7 @@ export default function MapViewer() {
   };
 
   return (
-    <MapComponent
+    <MobileMap
       location={location}
       logTable={logTable}
       routeCoordinates={routeCoordinates}
